@@ -25,6 +25,7 @@ game_kb = ReplyKeyboardMarkup(
     keyboard=[
         [
             KeyboardButton(text='Новая игра'),
+            KeyboardButton(text='Вариант игры'),
             KeyboardButton(text='Размер игрового поля')
         ]
     ], resize_keyboard=True
@@ -36,6 +37,16 @@ size_kb = InlineKeyboardMarkup(
             InlineKeyboardButton(text="3x3", callback_data=f'Size_3'),
             InlineKeyboardButton(text="5x5", callback_data=f'Size_5'),
             InlineKeyboardButton(text="7x7", callback_data=f'Size_7')
+        ]
+    ]
+)
+
+game_var_kb = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [
+            InlineKeyboardButton(text="Один игрок крестик", callback_data=f'var_game:cross'),
+            InlineKeyboardButton(text="Один игрок нолик", callback_data=f'var_game:zero'),
+            InlineKeyboardButton(text="Два игрока", callback_data=f'var_game:two')
         ]
     ]
 )
@@ -57,19 +68,40 @@ async def new_game(message: Message):
     await message.answer(f'Ход игрока {game.get_player()}', reply_markup=generat_keybord(game.get_areal()))
 
 
+@dsp.message(F.text == 'Вариант игры')
+async def var_game(message: Message):
+    await message.answer(f'Выберите вариант игры', reply_markup=game_var_kb)
+
+
 @dsp.message(F.text == 'Размер игрового поля')
 async def resize(message: Message):
     await message.answer(f'Выберете размер игрового поля', reply_markup=size_kb)
 
 
-@dsp.callback_query(F.data.contains('Size'))
-async def set_size(call: CallbackQuery):
+@dsp.callback_query(F.data.contains('var_game'))
+async def set_var_game(call: CallbackQuery):
     size = str(call.data)
-    list_ = size.split('_')
-    game.set_size(int(list_[1]))
+    list_ = size.split(':')
+    k = None
+    if list_[1] == 'cross':
+        k = 0
+    elif list_[1] == 'zero':
+        k = 1
+    elif list_[1] == 'two':
+        k = 2
+    game.select_game(k)
     await call.message.answer('Новая игра')
     await new_game(call.message)
     await call.answer()
+
+    @dsp.callback_query(F.data.contains('Size'))
+    async def set_size(call: CallbackQuery):
+        size = str(call.data)
+        list_ = size.split('_')
+        game.set_size(int(list_[1]))
+        await call.message.answer('Новая игра')
+        await new_game(call.message)
+        await call.answer()
 
 
 @dsp.callback_query(F.data.contains('Step'))

@@ -1,7 +1,4 @@
 """
-Описание логики работы программы
-"""
-"""
 Игра в крестики - нолики
 
 Правила:
@@ -9,6 +6,11 @@
 до тех пор пока не закончится поле, либо не появится победитель.
 Выигрывает тот, кто первым заполнит столбец либо строку, либо диагональ своим знаком.
 """
+
+"""
+Описание логики работы программы
+"""
+from mashine_player import MasPlayer
 
 
 def print_areal(ar):
@@ -126,6 +128,8 @@ class Game:
     def __init__(self, size=3):
         self.player = [['Крестик', 'Нолик'], ['x', '0']]
         self.number_player = 0
+        self.sel_game = 2
+        self.mas_player = MasPlayer(self.player[1])
         self.size = size
         self.areal = []
         self.new_game()
@@ -140,24 +144,92 @@ class Game:
         if len(self.areal) > 0:
             self.clear()
         create_areal()
+        self.number_player = 0
+        if self.sel_game < 2:
+            k = (self.sel_game + 1) % 2
+            if self.mas_player is None:
+                self.mas_player = MasPlayer(self.player[1], self.size, k)
+            else:
+                self.mas_player.set_player(k)
+                self.mas_player.set_size(self.size)
+            self.mas_player.set_areal(self.get_areal())
+            if self.mas_player.my_num_player == self.number_player:
+                result = self.step_mas()
+                if result[0] == 'error':
+                    return result
+                elif result[0] == 'end':
+                    return result
+                self.number_player = (self.number_player + 1) % 2
 
-    def step(self, row, column):
+    def step_check(self, row, column):
         if isinstance(row, str):
             row = int(row)
         if isinstance(column, str):
             column = int(column)
         if self.areal[row][column] == '*':
             self.areal[row][column] = self.player[1][self.number_player]
+            return 'Ok'
+        else:
+            return 'Ячейка уже занята'
+
+    def step_mas(self, count=0):
+        """
+        Шаг компьютера
+        :return:
+        """
+        row, col = self.mas_player.step()
+        result = self.step_check(row, col)
+        if result == 'Ok':
             result = end_game(self.areal)
             if result > -1:
                 return 'end', f'Игра завершена. Победил {self.player[0][result]}'
             elif result == -2:
                 return 'end', f'Игра завершена. Ничья'
-            else:
-                self.number_player = (self.number_player + 1) % 2
-                return 'next', 1
+            return 'next', 1
+        elif count > 2:
+            return 'error', f'Игра завершена. Победил {self.player[0][self.mas_player.other]}'
+        else:
+            self.step_mas(count + 1)
+
+    def step_player(self, row, column):
+        """
+        Шаг игрока
+        :param row:
+        :param column:
+        :return:
+        """
+        result = self.step_check(row, column)
+        if result == 'Ok':
+            result = end_game(self.areal)
+            if result > -1:
+                return 'end', f'Игра завершена. Победил {self.player[0][result]}'
+            elif result == -2:
+                return 'end', f'Игра завершена. Ничья'
+            return 'next', 1
         else:
             return 'error', 'Ячейка уже занята'
+
+    def step(self, row=0, column=0):
+        # Задачи
+        # проверка правильности ввода и заполнение игрового поля
+        # оценка результата шага
+        # подготовка данных для следующего шага
+        result = self.step_player(row, column)
+        if result[0] == 'error':
+            return result
+        elif result[0] == 'end':
+            return result
+        self.number_player = (self.number_player + 1) % 2
+        if self.sel_game == 2:
+            return result
+        else:
+            result = self.step_mas()
+            if result[0] == 'error':
+                return result
+            elif result[0] == 'end':
+                return result
+            self.number_player = (self.number_player + 1) % 2
+            return result
 
     def get_areal(self):
         return self.areal
@@ -170,10 +242,24 @@ class Game:
 
     def clear(self):
         self.areal = []
+        self.mas_player.clear_q()
         self.number_player = 0
 
     def exit_prog(self):
         exit()
+
+    def select_game(self, k):
+        self.sel_game = k
+        # player = (self.sel_game + 1) % 2
+        # if k == 2:
+        #     if self.mas_player is not None:
+        #         self.mas_player.clear_q()
+        # elif k < 2:
+        #     if self.mas_player is not None:
+        #         self.mas_player.set_size(self.size)
+        #         self.mas_player.set_player(player)
+        #     else:
+        #         self.mas_player = MasPlayer(self.player[1], self.size, player)
 
 
 def start():
